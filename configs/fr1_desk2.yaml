@@ -1,4 +1,4 @@
-data_root: "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg1_desk"
+data_root: "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg1_desk2"
 type: "fr1"
 near: 0.1
 far: 5.0

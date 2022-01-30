@@ -6,21 +6,22 @@ from ICP import ICP
 class ICPTracker(nn.Module):
 
     def __init__(self,
-                 max_iter_per_pyr,
+                 args,
                  device,
-                 n_pyr=3
                  ):
 
         super(ICPTracker, self).__init__()
-        self.scales = [0, 1, 2, 3]
+        self.n_pyr = args.n_pyramids
+        self.scales = list(range(self.n_pyr))
+        self.n_iters = args.n_iters
+        self.dampings = args.dampings
         self.construct_image_pyramids = ImagePyramids(self.scales, pool='avg')
         self.construct_depth_pyramids = ImagePyramids(self.scales, pool='max')
         self.device = device
         # initialize tracker at different levels
-        self.icp0 = ICP(max_iter_per_pyr, damping=1e-6)
-        self.icp1 = ICP(max_iter_per_pyr, damping=1e-4)
-        self.icp2 = ICP(max_iter_per_pyr, damping=1e-4)
-        self.icp3 = ICP(max_iter_per_pyr, damping=1e-2)
+        self.icp_solvers = []
+        for i in range(self.n_pyr):
+            self.icp_solvers += [ICP(self.n_iters[i], damping=self.dampings[i])]
 
     @torch.no_grad()
     def forward(self, depth0, depth1, K):
@@ -29,23 +30,11 @@ class ICPTracker(nn.Module):
         dpt0_pyr = [d.squeeze() for d in dpt0_pyr]
         dpt1_pyr = self.construct_depth_pyramids(depth1.view(1, 1, H, W))
         dpt1_pyr = [d.squeeze() for d in dpt1_pyr]
-
-        poseI = torch.eye(4).to(self.device)
-
-        # GN update on level 3
-        K3 = K >> 3
-        pose3 = self.icp3(poseI, dpt0_pyr[3], dpt1_pyr[3], K3)
-
-        # GN update on level 2
-        K2 = K >> 2
-        pose2 = self.icp2(pose3, dpt0_pyr[2], dpt1_pyr[2], K2)
-
-        # GN update on level 1
-        K1 = K >> 1
-        pose1 = self.icp1(pose2, dpt0_pyr[1], dpt1_pyr[1], K1)
-
-        # GN update on the raw scale
-        pose10 = self.icp0(pose1, dpt0_pyr[0], dpt1_pyr[0], K)
+        # optimization steps
+        pose10 = torch.eye(4).to(self.device)  # initialize from identity
+        for i in reversed(range(self.n_pyr)):
+            Ki = get_scaled_K(K, i)
+            pose10 = self.icp_solvers[i](pose10, dpt0_pyr[i], dpt1_pyr[i], Ki)
 
         return pose10
 
@@ -69,3 +58,15 @@ class ImagePyramids(nn.Module):
         else:
             x_out = [f(x) for f in self.multiscales]
         return x_out
+
+
+def get_scaled_K(K, l):
+    if l != 0:
+        Ks = K.clone()
+        Ks[0, 0] /= 2 ** l
+        Ks[1, 1] /= 2 ** l
+        Ks[0, 2] /= 2 ** l
+        Ks[1, 2] /= 2 ** l
+        return Ks
+    else:
+        return K

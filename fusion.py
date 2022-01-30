@@ -68,7 +68,7 @@ class TSDFVolumeTorch:
     Volumetric TSDF Fusion of RGB-D Images.
     """
 
-    def __init__(self, voxel_dim, origin, voxel_size, device, margin=3, vol_bnds=None, fuse_color=False):
+    def __init__(self, voxel_dim, origin, voxel_size, device, margin=3, fuse_color=False):
         """
         Args:
             vol_bnds (ndarray): An ndarray of shape (3, 2). Specifies the
@@ -77,27 +77,8 @@ class TSDFVolumeTorch:
         """
 
         self.device = device
-
         # Define voxel volume parameters
         self.voxel_size = float(voxel_size)
-
-        # prioritize the volume size setting
-        if vol_bnds is not None:
-            self.vol_bnds = vol_bnds
-            curr_vol_size = self.vol_bnds[:, 1] - self.vol_bnds[:, 0]
-            default_vol_size = np.array(voxel_dim) * voxel_size
-            vol_size = np.max([np.max(curr_vol_size), np.max(default_vol_size)])
-
-            if vol_size > np.max(curr_vol_size):
-                inc_vol_size = (vol_size - curr_vol_size) / 2.0
-                self.vol_bnds[:, 0] -= inc_vol_size
-                self.vol_bnds[:, 1] += inc_vol_size
-
-            origin = self.vol_bnds[:, 0]
-            self.voxel_size = vol_size / np.max(voxel_dim)
-        else:
-            self.voxel_size = float(voxel_size)
-
         self.sdf_trunc = margin * self.voxel_size
         self.integrate_func = integrate
         self.fuse_color = fuse_color
@@ -145,7 +126,7 @@ class TSDFVolumeTorch:
         return data.float().to(self.device)
 
     @torch.no_grad()
-    def integrate(self, depth_im, cam_intr, cam_pose, obs_weight, T_wo=None, color_img=None):
+    def integrate(self, depth_im, cam_intr, cam_pose, obs_weight, color_img=None):
         """Integrate an RGB-D frame into the TSDF volume.
         Args:
         depth_im (torch.Tensor): A depth image of shape (H, W).

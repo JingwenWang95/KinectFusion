@@ -72,11 +72,6 @@ class ICP(nn.Module):
         mask1 = r_vertex1[..., -1] > 0.
 
         diff = vertex0_to1 - r_vertex1  # [h, w, 3]
-        normal_diff = (normal0_to1 * r_normal1).sum(dim=-1)
-
-        # occlusion
-        occ = ~inviews | (diff.norm(p=2, dim=-1) > 0.10)
-              #| (normal_diff < 0.7)   # since normal is estimated from the noise depth, might not be very useful
 
         # point-to-plane residuals
         res = (r_normal1 * diff).sum(dim=-1)  # [h, w]
@@ -87,14 +82,13 @@ class ICP(nn.Module):
         # compose jacobians
         J_F_p = torch.cat((J_rot, J_trs), dim=-1).view(H, W, 6)  # follow the order of [rot, trs]  [hw, 1, 6]
 
-        J_F_p[occ | ~mask0 | ~mask1] = 0.
-        res[occ | ~mask0 | ~mask1] = 0.
+        # occlusion
+        occ = ~inviews | (diff.norm(p=2, dim=-1) > 0.10)
+        invalid_mask = occ | ~mask0 | ~mask1
+        J_F_p[invalid_mask] = 0.
+        res[invalid_mask] = 0.
         res = res.view(-1, 1)  # [hw, 1]
-        # follow the conversion of negating the jacobian here
-        J_F_p = -J_F_p.view(-1, 1, 6)
-
-        # res, w = get_robust_res(res, 0.05)
-        # J_F_p *= w[..., None]
+        J_F_p = J_F_p.view(-1, 1, 6)  # [hw, 1, 6]
 
         return res, J_F_p, occ
 
@@ -229,52 +223,15 @@ def lev_mar_H(JtWJ, damping):
 
 
 def forward_update_pose(H, Rhs, pose):
-    """ Ues left-multiplication for the pose update
-    in the forward compositional form
-    ksi_k o (delta_ksi)
-    :param the (approximated) Hessian matrix
-    :param Right-hand side vector
-    :param the initial pose (forward transform inverse of xi)
-    ---------
-    :return the forward updated pose (inverse of xi)
+    """
+    :param H:
+    :param Rhs:
+    :param pose:
+    :return:
     """
     xi = least_square_solve(H, Rhs).squeeze()
-
-    # forward compotional for SE3: delta_ksi
-    d_R = exp_so3(xi[:3])
-    d_t = xi[3:]
-    R = pose[:3, :3]
-    t = pose[:3, 3]
-    R1 = d_R @ R
-    t1 = d_R @ t + d_t
-    pose[:3, :3] = R1
-    pose[:3, 3] = t1
-
-    # my implementation using full SE(3) exponential
-    # pose = exp_se3(xi) @ pose
+    pose = exp_se3(xi) @ pose
     return pose
-
-
-def exp_so3(w):
-    w_hat = torch.tensor([[0., -w[2], w[1]],
-                          [w[2], 0., -w[0]],
-                          [-w[1], w[0], 0.]]).to(w)
-    w_hat_second = torch.mm(w_hat, w_hat).to(w)
-
-    theta = torch.norm(w)
-    theta_2 = theta ** 2
-    sin_theta = torch.sin(theta)
-    cos_theta = torch.cos(theta)
-    eye_3 = torch.eye(3).to(w)
-
-    eps = 1e-10
-
-    if theta <= eps:
-        e_w = eye_3
-    else:
-        e_w = eye_3 + w_hat * sin_theta / theta + w_hat_second * (1. - cos_theta) / theta_2
-
-    return e_w
 
 
 def exp_se3(xi):
@@ -324,8 +281,6 @@ def invH(H):
     # GPU is much slower for matrix inverse when the size is small (compare to CPU)
     # works (50x faster) than inversing the dense matrix in GPU
     if H.is_cuda:
-        # invH = bpinv((H).cpu()).cuda()
-        # invH = torch.inverse(H)
         invH = torch.inverse(H.cpu()).cuda()
     else:
         invH = torch.inverse(H)
@@ -334,47 +289,10 @@ def invH(H):
 
 def least_square_solve(H, Rhs):
     """
-    x =  - H ^{-1} * Rhs
-    importantly: use pytorch inverse to have a differential inverse operation
-    :param H: Hessian
-    :type H: [6, 6]
-    :param  Rhs: Right-hand side vector
-    :type Rhs: [6, 1]
-    :return: solved ksi
-    :rtype:  [6, 1]
+    :param H:
+    :param Rhs:
+    :return:
     """
     inv_H = invH(H)  # [B, 6, 6] square matrix
-    xi = inv_H @ Rhs
-    # because the jacobian is also including the minus signal, it should be (J^T * J) J^T * r
-    # xi = - xi
+    xi = -inv_H @ Rhs
     return xi
-
-
-def huber_norm_weights(x, b=0.02):
-    """
-    :param x: norm of residuals, torch.Tensor (N, 1)
-    :param b: threshold
-    :return: weight vector torch.Tensor (N, 1)
-    """
-    # x is residual norm
-    res_norm = torch.zeros_like(x)
-    res_norm[x <= b] = x[x <= b] ** 2
-    res_norm[x > b] = 2 * b * x[x > b] - b ** 2
-    x[x < 1e-8] = 1.
-    return torch.sqrt(res_norm) / x
-
-
-def get_robust_res(res, b):
-    """
-    :param res: residual vectors [N, C]
-    :param b: threshold
-    :return: residuals after applying huber norm
-    """
-    assert len(res.shape) == 2
-    res_norm = torch.norm(res, dim=-1, keepdim=True)
-    # print(res.shape[0])
-    w = huber_norm_weights(res_norm, b=b)
-    # print(w.shape[0])
-    robust_res = w * res
-
-    return robust_res, w

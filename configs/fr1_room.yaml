@@ -1,0 +1,10 @@
+data_root: "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg1_room"
+data_type: "fr1"
+near: 0.1
+far: 7.0
+vol_bounds: [-2.5, 3., -3.2, 3., -0.2, 3.]
+voxel_size: 0.03
+n_pyramids: 4
+n_iters: [10, 3, 3, 3]
+dampings: [1.0e-4, 1.0e-4, 1.0e-2, 1.0e-2]
+n_steps: 256

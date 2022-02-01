@@ -2,6 +2,8 @@ import os
 import math
 import shutil
 import numpy as np
+from utils import load_yaml
+from TUM_RGBD import get_calib
 
 
 def read_file_list(filename):
@@ -102,12 +104,13 @@ def get_poses_from_associations(fname):
 
 
 if __name__ == "__main__":
-    in_dir = "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg1_desk2"
-    out_dir = "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg1_desk2/processed"
+    config_path = "../configs/fr1_room.yaml"
+    args = load_yaml(config_path)
+    out_dir = os.path.join(args.data_root, "processed")
 
     # create association files
-    get_association(os.path.join(in_dir, "depth.txt"), os.path.join(in_dir, "groundtruth.txt"), os.path.join(in_dir, "dep_traj.txt"))
-    get_association(os.path.join(in_dir, "rgb.txt"), os.path.join(in_dir, "dep_traj.txt"), os.path.join(in_dir, "rgb_dep_traj.txt"))
+    get_association(os.path.join(args.data_root, "depth.txt"), os.path.join(args.data_root, "groundtruth.txt"), os.path.join(args.data_root, "dep_traj.txt"))
+    get_association(os.path.join(args.data_root, "rgb.txt"), os.path.join(args.data_root, "dep_traj.txt"), os.path.join(args.data_root, "rgb_dep_traj.txt"))
 
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -118,15 +121,32 @@ if __name__ == "__main__":
     if not os.path.exists(out_dep_dir):
         os.makedirs(out_dep_dir)
 
+    # rename image files and save c2w poses
     poses = []
-    with open(os.path.join(in_dir, "rgb_dep_traj.txt")) as f:
+    with open(os.path.join(args.data_root, "rgb_dep_traj.txt")) as f:
         for i, line in enumerate(f.readlines()):
             line_list = line.strip().split(" ")
             rgb_file = line_list[1]
-            shutil.copyfile(os.path.join(in_dir, rgb_file), os.path.join(out_rgb_dir, "%04d.png" % i))
+            shutil.copyfile(os.path.join(args.data_root, rgb_file), os.path.join(out_rgb_dir, "%04d.png" % i))
             dep_file = line_list[3]
-            shutil.copyfile(os.path.join(in_dir, dep_file), os.path.join(out_dep_dir, "%04d.png" % i))
+            shutil.copyfile(os.path.join(args.data_root, dep_file), os.path.join(out_dep_dir, "%04d.png" % i))
             poses += [tum2matrix([float(x) for x in line_list[5:]])]
 
     np.savez(os.path.join(out_dir, "raw_poses.npz"), c2w_mats=poses)
+
+    # save projection matrices
+    K = np.eye(3)
+    intri = get_calib()[args.data_type]
+    K[0, 0] = intri[0]
+    K[1, 1] = intri[1]
+    K[0, 2] = intri[2]
+    K[1, 2] = intri[3]
+    camera_dict = np.load(os.path.join(out_dir, "raw_poses.npz"))
+    poses = camera_dict["c2w_mats"]
+    P_mats = []
+    for c2w in poses:
+        w2c = np.linalg.inv(c2w)
+        P = K @ w2c[:3, :]
+        P_mats += [P]
+    np.savez(os.path.join(out_dir, "cameras.npz"), world_mats=P_mats)
 

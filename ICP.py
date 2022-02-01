@@ -7,7 +7,8 @@ import torch.nn.functional as F
 class ICP(nn.Module):
     def __init__(self,
                  max_iter=3,
-                 damping=1e-3
+                 damping=1e-3,
+                 outlier_dist_th=0.10,
                  ):
         """
         :param max_iter, maximum number of iterations

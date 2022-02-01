@@ -5,14 +5,14 @@ import trimesh
 import open3d as o3d
 from matplotlib import pyplot as plt
 from fusion import TSDFVolumeTorch
-from dataset.TUM_RGBD import TUMDataset
+from dataset.TUM_RGBD import TUMDataset, TUMDatasetOnline
 from Tracker import ICPTracker
 from utils import load_yaml, get_volume_setting, get_time
 
 
 if __name__ == "__main__":
     exp_dir = "../../logs/kf_vo/retrained"
-    config_path = "configs/fr1_desk.yaml"
+    config_path = "configs/fr3_long_office.yaml"
     args = load_yaml(config_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,7 +35,7 @@ if __name__ == "__main__":
             curr_pose = pose_gt
         else:  # tracking
             # 1. render depth image (1) from tsdf volume
-            depth1, color1, vertex01, normal1, mask1 = tsdf_volume.render_model(curr_pose, K, H, W, n_samples=192)
+            depth1, color1, vertex01, normal1, mask1 = tsdf_volume.render_model(curr_pose, K, H, W, near=args.near, far=args.far, n_samples=args.n_steps)
             T10 = icp_tracker(depth0, depth1, K)  # transform from 0 to 1
             curr_pose = curr_pose @ T10
 

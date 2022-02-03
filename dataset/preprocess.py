@@ -3,7 +3,7 @@ import math
 import shutil
 import numpy as np
 from utils import load_yaml
-from TUM_RGBD import get_calib
+from tum_rgbd import get_calib
 
 
 def read_file_list(filename):

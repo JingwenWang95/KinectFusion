@@ -4,8 +4,8 @@ import argparse
 import torch
 import open3d as o3d
 from fusion import TSDFVolumeTorch
-from dataset.TUM_RGBD import TUMDataset, TUMDatasetOnline
-from Tracker import ICPTracker
+from dataset.tum_rgbd import TUMDataset, TUMDatasetOnline
+from tracker import ICPTracker
 from utils import load_config, get_volume_setting, get_time
 
 

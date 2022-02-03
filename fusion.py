@@ -180,29 +180,14 @@ class TSDFVolumeTorch:
             return verts, faces, norms
 
     def to_o3d_mesh(self):
+        """Convert to o3d mesh object for visualization
+        """
         verts, faces, norms, colors = self.get_mesh()
-        # vertices = self.mesh_cache.vertices.reshape((-1, 3))
-        # triangles = np.arange(vertices.shape[0]).reshape((-1, 3))
-
-        final_mesh = o3d.geometry.TriangleMesh()
-        # The pre-conversion is saving tons of time
-        final_mesh.vertices = o3d.utility.Vector3dVector(verts.astype(float))
-        final_mesh.triangles = o3d.utility.Vector3iVector(faces.astype(np.int32))
-        final_mesh.vertex_colors = o3d.utility.Vector3dVector(colors / 255.)
-
-        # # Assign color:
-        # if vertices.shape[0] > 0:
-        #     import matplotlib.cm
-        #     vert_color = self.mesh_cache.vertices_std.reshape((-1, )).astype(float)
-        #     if self.extract_mesh_std_range is not None:
-        #         vcolor_min, vcolor_max = self.extract_mesh_std_range
-        #         vert_color = np.clip(vert_color, vcolor_min, vcolor_max)
-        #     else:
-        #         vcolor_min, vcolor_max = vert_color.min(), vert_color.max()
-        #     vert_color = (vert_color - vcolor_min) / (vcolor_max - vcolor_min)
-        #     vert_color = matplotlib.cm.jet(vert_color)[:, :3]
-        #     final_mesh.vertex_colors = o3d.utility.Vector3dVector(vert_color)
-        return final_mesh
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(verts.astype(float))
+        mesh.triangles = o3d.utility.Vector3iVector(faces.astype(np.int32))
+        mesh.vertex_colors = o3d.utility.Vector3dVector(colors / 255.)
+        return mesh
 
     def get_normals(self):
         nx, ny, nz = self.vol_dim

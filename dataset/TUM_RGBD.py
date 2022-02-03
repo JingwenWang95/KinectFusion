@@ -186,7 +186,7 @@ class TUMDatasetOnline(torch.utils.data.Dataset):
         K = self.K.to(self.device)
         c2w = self.c2w_all[idx].to(self.device)
         # read images
-        rgb = np.array(imageio.imread(self.rgb_files_all[idx])).astype(np.float32) / 255.
+        rgb = np.array(imageio.imread(self.rgb_files_all[idx])).astype(np.float32)
         depth = np.array(imageio.imread(self.depth_files_all[idx])).astype(np.float32)
         depth /= 5000.
         # depth = cv2.bilateralFilter(depth, 5, 0.2, 15)

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import yaml
 from addict import Dict
+import argparse
 
 
 class ForceKeyErrorDict(Dict):
@@ -16,6 +17,10 @@ def load_yaml(path):
         config = ForceKeyErrorDict(**config_dict)
 
     return config
+
+
+def load_config(args):
+    return load_yaml(args.config)
 
 
 def get_volume_setting(args):

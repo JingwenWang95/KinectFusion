@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 import torch
 import trimesh
@@ -7,16 +8,20 @@ from matplotlib import pyplot as plt
 from fusion import TSDFVolumeTorch
 from dataset.TUM_RGBD import TUMDataset, TUMDatasetOnline
 from Tracker import ICPTracker
-from utils import load_yaml, get_volume_setting, get_time
+from utils import load_config, get_volume_setting, get_time
 
 
 if __name__ == "__main__":
-    exp_dir = "../../logs/kf_vo/retrained"
-    config_path = "configs/fr3_long_office.yaml"
-    args = load_yaml(config_path)
+    parser = argparse.ArgumentParser()
+    # standard configs
+    parser.add_argument('--config', type=str, default="configs/fr1_room.yaml", help='Path to config file.')
+    args = load_config(parser.parse_args())
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
+    dataset = TUMDatasetOnline(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
     H, W, K = dataset.H, dataset.W, dataset.K
 
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)
@@ -44,7 +49,7 @@ if __name__ == "__main__":
                               K,
                               curr_pose,
                               obs_weight=1.,
-                              color_img=color0 * 255.
+                              color_img=color0
                               )
         t1 = get_time()
         t += [t1 - t0]

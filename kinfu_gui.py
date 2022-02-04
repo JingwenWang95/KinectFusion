@@ -12,6 +12,7 @@ from utils import load_config, get_volume_setting, get_time
 vis_param = argparse.Namespace()
 vis_param.frame_id = 0
 vis_param.current_mesh = None
+vis_param.current_camera = None
 vis_param.curr_pose = None
 
 
@@ -35,12 +36,19 @@ def refresh(vis):
 
     # fusion
     vis_param.map.integrate(depth0, K, vis_param.curr_pose, obs_weight=1., color_img=color0)
+    # update mesh
     mesh = vis_param.map.to_o3d_mesh()
     if vis_param.current_mesh is not None:
         vis.remove_geometry(vis_param.current_mesh, reset_bounding_box=False)
-
     vis.add_geometry(mesh, reset_bounding_box=False)
     vis_param.current_mesh = mesh
+    # update camera
+    camera = draw_camera(vis_param.curr_pose.cpu().numpy())
+    if vis_param.current_camera is not None:
+        vis.remove_geometry(vis_param.current_camera, reset_bounding_box=False)
+    vis.add_geometry(camera, reset_bounding_box=False)
+    vis_param.current_camera = camera
+
     vis_param.frame_id += 1
 
     if vis_param.frame_id == vis_param.n_frames:
@@ -49,9 +57,24 @@ def refresh(vis):
         return True
 
 
+def draw_camera(c2w, cam_width=0.2, cam_height=0.15, f=0.1):
+    points = [[0, 0, 0], [-cam_width, -cam_height, f], [cam_width, -cam_height, f],
+              [cam_width, cam_height, f], [-cam_width, cam_height, f]]
+    lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [2, 3], [3, 4], [4, 1]]
+    colors = [[1, 0, 1] for i in range(len(lines))]
+
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(points)
+    line_set.lines = o3d.utility.Vector2iVector(lines)
+    line_set.colors = o3d.utility.Vector3dVector(colors)
+    line_set.transform(c2w)
+
+    return line_set
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default="configs/fr1_room.yaml", help='Path to config file.')
+    parser.add_argument('--config', type=str, default="configs/fr3_long_office.yaml", help='Path to config file.')
     args = load_config(parser.parse_args())
 
     if not os.path.exists(args.output_dir):

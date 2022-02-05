@@ -71,8 +71,8 @@ class TSDFVolumeTorch:
     def __init__(self, voxel_dim, origin, voxel_size, device, margin=3, fuse_color=False):
         """
         Args:
-            vol_bnds (ndarray): An ndarray of shape (3, 2). Specifies the
-            xyz bounds (min/max) in meters.
+            voxel_dim (ndarray): [3,] stores volume dimensions: Nx, Ny, Nz
+            origin (ndarray): [3,] world coordinate of voxel [0, 0, 0]
             voxel_size (float): The volume discretization in meters.
         """
 
@@ -112,6 +112,8 @@ class TSDFVolumeTorch:
         self.reset()
 
     def reset(self):
+        """Set volumes
+        """
         self.tsdf_vol = torch.ones(*self.vol_dim).to(self.device)
         self.weight_vol = torch.zeros(*self.vol_dim).to(self.device)
         if self.fuse_color:
@@ -190,6 +192,8 @@ class TSDFVolumeTorch:
         return mesh
 
     def get_normals(self):
+        """Compute normal volume
+        """
         nx, ny, nz = self.vol_dim
         device = self.device
         # dx = torch.cat([torch.zeros(1, ny, nz).to(device), (self.tsdf_vol[2:, :, :] - self.tsdf_vol[:-2, :, :]) / (2 * self.voxel_size), torch.zeros(1, ny, nz).to(device)], dim=0)
@@ -211,6 +215,8 @@ class TSDFVolumeTorch:
         return norms  # [nx, ny, nz, 3]
 
     def get_nn(self, field_vol, coords_w):
+        """Get nearest-neigbor values from a given volume
+        """
         field_dim = field_vol.shape
         assert len(field_dim) == 3 or len(field_dim) == 4
         vox_coord_float = (coords_w - self.vol_origin[None, :]) / self.voxel_size
@@ -226,6 +232,8 @@ class TSDFVolumeTorch:
         return v_nn
 
     def tril_interp(self, field_vol, coords_w):
+        """Get tri-linear interpolated value from a given volume
+        """
         field_dim = field_vol.shape
         assert len(field_dim) == 3 or len(field_dim) == 4
         n_pts = coords_w.shape[0]

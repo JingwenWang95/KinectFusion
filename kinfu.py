@@ -3,10 +3,9 @@ import argparse
 import numpy as np
 import torch
 import trimesh
-import open3d as o3d
 from matplotlib import pyplot as plt
 from fusion import TSDFVolumeTorch
-from dataset.tum_rgbd import TUMDataset, TUMDatasetOnline
+from dataset.tum_rgbd import TUMDataset
 from tracker import ICPTracker
 from utils import load_config, get_volume_setting, get_time
 
@@ -14,14 +13,14 @@ from utils import load_config, get_volume_setting, get_time
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # standard configs
-    parser.add_argument('--config', type=str, default="configs/fr1_room.yaml", help='Path to config file.')
+    parser.add_argument('--config', type=str, default="configs/fr1_desk.yaml", help='Path to config file.')
     args = load_config(parser.parse_args())
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = TUMDatasetOnline(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
+    dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
     H, W, K = dataset.H, dataset.W, dataset.K
 
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)

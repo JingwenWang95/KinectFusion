@@ -1,10 +1,11 @@
 import os
 import time
 import argparse
+import numpy as np
 import torch
 import open3d as o3d
 from fusion import TSDFVolumeTorch
-from dataset.tum_rgbd import TUMDataset, TUMDatasetOnline
+from dataset.tum_rgbd import TUMDataset
 from tracker import ICPTracker
 from utils import load_config, get_volume_setting, get_time
 
@@ -33,7 +34,9 @@ def refresh(vis):
             near=args.near, far=vis_param.args.far, n_samples=vis_param.args.n_steps)
         T10 = vis_param.tracker(depth0, depth1, K)  # transform from 0 to 1
         vis_param.curr_pose = vis_param.curr_pose @ T10
-
+    # update view-point
+    if vis_param.args.follow_camera:
+        set_view(vis, vis_param.curr_pose.cpu().numpy())
     # fusion
     vis_param.map.integrate(depth0, K, vis_param.curr_pose, obs_weight=1., color_img=color0)
     # update mesh
@@ -49,11 +52,10 @@ def refresh(vis):
     vis.add_geometry(camera, reset_bounding_box=False)
     vis_param.current_camera = camera
 
-    vis_param.frame_id += 1
-
-    if vis_param.frame_id == vis_param.n_frames:
+    if vis_param.frame_id == vis_param.n_frames - 1:
         return False
     else:
+        vis_param.frame_id += 1
         return True
 
 
@@ -72,16 +74,35 @@ def draw_camera(c2w, cam_width=0.2, cam_height=0.15, f=0.1):
     return line_set
 
 
+def set_view(vis, c2w, z_offset=-3):
+    """
+    :param vis: visualizer handle
+    :param c2w: world to camera transform Twc
+    :param z_offset: offset along z-direction of eye wrt camera
+    :return:
+    """
+    vis_ctl = vis.get_view_control()
+    cam = vis_ctl.convert_to_pinhole_camera_parameters()
+    # eye to camera
+    e2c = np.eye(4)
+    e2c[2, 3] = z_offset
+    e2w = c2w @ e2c
+    # world to eye w2e
+    cam.extrinsic = np.linalg.inv(e2w)
+    vis_ctl.convert_from_pinhole_camera_parameters(cam)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default="configs/fr3_long_office.yaml", help='Path to config file.')
+    parser.add_argument("--config", type=str, default="configs/fr1_desk.yaml", help="Path to config file.")
+    parser.add_argument("--follow_camera", action="store_true", help="Make view-point follow the camera motion")
     args = load_config(parser.parse_args())
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = TUMDatasetOnline(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
+    dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)
 
     vis_param.args = args
@@ -95,9 +116,14 @@ if __name__ == "__main__":
     # visualize
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window()
+    vis.get_view_control().unset_constant_z_near()
+    vis.get_view_control().unset_constant_z_far()
     vis.get_render_option().mesh_show_back_face = True
     vis.register_animation_callback(callback_func=refresh)
-    # vis.register_key_callback(key=ord("."), callback_func=refresh)
     vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
+    # set initial view-point
+    c2w0 = dataset[0][2]
+    set_view(vis, c2w0.cpu().numpy())
+    # start reconstruction and visualization
     vis.run()
     vis.destroy_window()

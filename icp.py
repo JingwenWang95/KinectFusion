@@ -21,24 +21,18 @@ class ICP(nn.Module):
 
     def forward(self, pose10, depth0, depth1, K):
         """
-        :param pose10:
-        :param depth0:
-        :param depth1:
-        :param K:
-        :return:
+        :param pose10: initial pose estimate
+        :param depth0: template depth image (0)
+        :param depth1: depth image (1)
+        :param K: intrinsic matric
+        :return: refined 1-to-0 transform pose10
         """
-
         # create vertex and normal for current frame
         vertex0 = compute_vertex(depth0, K)
         normal0 = compute_normal(vertex0)
         mask0 = depth0 > 0.
         vertex1 = compute_vertex(depth1, K)
         normal1 = compute_normal(vertex1)
-
-        #  # visualize surface normal image.
-        # img = (((normal1.permute(0,2,3,1)[0,:,:,:]+1.0)*128.0).cpu().numpy()).astype('uint8')
-        # cv2.imshow('normal', img)
-        # cv2.waitKey(0)
 
         for idx in range(self.max_iterations):
             # compute residuals
@@ -47,8 +41,6 @@ class ICP(nn.Module):
             JtR = self.compute_jtr(J_F_p, residuals)
             pose10 = self.GN_solver(JtWJ, JtR, pose10, damping=self.damping)
 
-        # weights = torch.ones(residuals.shape).type_as(residuals)
-        # print('---')
         return pose10
 
     @staticmethod

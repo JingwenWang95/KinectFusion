@@ -1,9 +1,10 @@
 # KinectFusion implemented in Python with PyTorch
 
-<img src="images/kinfu.gif" height=250px align="right"/>
+<img src="images/kinfu.gif" height=240px align="right"/>
 
-This is a lightweight Python implementation of KinectFusion. All the core functions (TSDF volume, frame-to-model tracking, point-to-plane ICP, raycasting, TSDF fusion, etc.) are implemented using pure PyTorch, i.e. no CUDA kernels. 
-Although without any custom CUDA functions, the system could still run at a fairly fast speed: The demo reconstructs the TUM fr1_desk sequence into a 225 x 171 x 111 TSDF volume with 2cm resolution at round 17 FPS with a single RTX-2080 GPU (~1.5 FPS in CPU mode) 
+This is a lightweight Python implementation of [KinectFusion](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/ismar2011.pdf). All the core functions (TSDF volume, frame-to-model tracking, point-to-plane ICP, raycasting, TSDF fusion, etc.) are implemented using pure PyTorch, i.e. no custom CUDA kernels. 
+
+Although without any custom CUDA functions, the system could still run at a fairly fast speed: The demo reconstructs the [TUM fr1_desk sequence](https://vision.in.tum.de/data/datasets/rgbd-dataset/download#) into a 225 x 171 x 111 TSDF volume with 2cm resolution at round 17 FPS with a single RTX-2080 GPU (~1.5 FPS in CPU mode) 
 
 Note that this project is mainly for study purpose, and is not fully optimized for accurate camera tracking.
 

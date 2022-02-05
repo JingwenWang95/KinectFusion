@@ -2,8 +2,9 @@ import os
 import math
 import shutil
 import numpy as np
-from utils import load_yaml
+import argparse
 from tum_rgbd import get_calib
+from utils import load_config
 
 
 def read_file_list(filename):
@@ -104,8 +105,10 @@ def get_poses_from_associations(fname):
 
 
 if __name__ == "__main__":
-    config_path = "../configs/fr1_room.yaml"
-    args = load_yaml(config_path)
+    parser = argparse.ArgumentParser()
+    # standard configs
+    parser.add_argument('--config', type=str, default="configs/fr1_desk.yaml", help='Path to config file.')
+    args = load_config(parser.parse_args())
     out_dir = os.path.join(args.data_root, "processed")
 
     # create association files

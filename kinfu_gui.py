@@ -22,6 +22,9 @@ def refresh(vis):
         # This spares slots for meshing thread to emit commands.
         time.sleep(0.01)
 
+    if vis_param.frame_id == vis_param.n_frames:
+        return False
+
     sample = vis_param.dataset[vis_param.frame_id]
     color0, depth0, pose_gt, K = sample  # use live image as template image (0)
     # depth0[depth0 <= 0.5] = 0.
@@ -36,7 +39,7 @@ def refresh(vis):
         vis_param.curr_pose = vis_param.curr_pose @ T10
     # update view-point
     if vis_param.args.follow_camera:
-        set_view(vis, vis_param.curr_pose.cpu().numpy())
+        follow_camera(vis, vis_param.curr_pose.cpu().numpy())
     # fusion
     vis_param.map.integrate(depth0, K, vis_param.curr_pose, obs_weight=1., color_img=color0)
     # update mesh
@@ -52,11 +55,8 @@ def refresh(vis):
     vis.add_geometry(camera, reset_bounding_box=False)
     vis_param.current_camera = camera
 
-    if vis_param.frame_id == vis_param.n_frames - 1:
-        return False
-    else:
-        vis_param.frame_id += 1
-        return True
+    vis_param.frame_id += 1
+    return True
 
 
 def draw_camera(c2w, cam_width=0.2, cam_height=0.15, f=0.1):
@@ -74,22 +74,36 @@ def draw_camera(c2w, cam_width=0.2, cam_height=0.15, f=0.1):
     return line_set
 
 
-def set_view(vis, c2w, z_offset=-3):
+def follow_camera(vis, c2w, z_offset=-2):
     """
     :param vis: visualizer handle
     :param c2w: world to camera transform Twc
     :param z_offset: offset along z-direction of eye wrt camera
     :return:
     """
-    vis_ctl = vis.get_view_control()
-    cam = vis_ctl.convert_to_pinhole_camera_parameters()
-    # eye to camera
     e2c = np.eye(4)
     e2c[2, 3] = z_offset
     e2w = c2w @ e2c
+    set_view(vis, np.linalg.inv(e2w))
+
+
+def set_view(vis, w2e=np.eye(4)):
+    """
+    :param vis: visualizer handle
+    :param w2e: world-to-eye transform
+    :return:
+    """
+    vis_ctl = vis.get_view_control()
+    cam = vis_ctl.convert_to_pinhole_camera_parameters()
     # world to eye w2e
-    cam.extrinsic = np.linalg.inv(e2w)
+    cam.extrinsic = w2e
     vis_ctl.convert_from_pinhole_camera_parameters(cam)
+
+
+def get_view(vis):
+    vis_ctl = vis.get_view_control()
+    cam = vis_ctl.convert_to_pinhole_camera_parameters()
+    print(cam.extrinsic)
 
 
 if __name__ == "__main__":
@@ -102,6 +116,7 @@ if __name__ == "__main__":
         os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
     dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)
 
@@ -115,15 +130,17 @@ if __name__ == "__main__":
 
     # visualize
     vis = o3d.visualization.VisualizerWithKeyCallback()
-    vis.create_window()
-    vis.get_view_control().unset_constant_z_near()
-    vis.get_view_control().unset_constant_z_far()
+    vis.create_window(width=1280, height=960)
+    # vis.get_view_control().unset_constant_z_near()
+    # vis.get_view_control().unset_constant_z_far()
     vis.get_render_option().mesh_show_back_face = True
     vis.register_animation_callback(callback_func=refresh)
-    vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
+    coord_axes = o3d.geometry.TriangleMesh.create_coordinate_frame()
+    vis.add_geometry(coord_axes)
+    vis.remove_geometry(coord_axes, reset_bounding_box=False)
     # set initial view-point
     c2w0 = dataset[0][2]
-    set_view(vis, c2w0.cpu().numpy())
+    follow_camera(vis, c2w0.cpu().numpy())
     # start reconstruction and visualization
     vis.run()
     vis.destroy_window()

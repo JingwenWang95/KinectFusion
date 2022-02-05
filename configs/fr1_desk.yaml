@@ -4,7 +4,7 @@ data_type: "fr1"
 near: 0.1
 far: 5.0
 vol_bounds: [-2.5, 2.0, -0.7, 2.7, -0.2, 2.0]
-voxel_size: 0.04
+voxel_size: 0.02
 n_pyramids: 3
 n_iters: [6, 3, 3]
 dampings: [1.0e-4, 1.0e-4, 1.0e-2]

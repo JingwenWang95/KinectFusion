@@ -282,9 +282,7 @@ def invH(H):
 
 def least_square_solve(H, Rhs):
     """
-    :param H:
-    :param Rhs:
-    :return:
+    Solve for JTJ @ xi = -JTR
     """
     inv_H = invH(H)  # [B, 6, 6] square matrix
     xi = -inv_H @ Rhs

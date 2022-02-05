@@ -2,10 +2,11 @@ import os
 import argparse
 import numpy as np
 import torch
+import cv2
 import trimesh
 from matplotlib import pyplot as plt
 from fusion import TSDFVolumeTorch
-from dataset.tum_rgbd import TUMDataset
+from dataset.tum_rgbd import TUMDataset, TUMDatasetOnline
 from tracker import ICPTracker
 from utils import load_config, get_volume_setting, get_time
 
@@ -20,8 +21,9 @@ if __name__ == "__main__":
         os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
     dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
-    H, W, K = dataset.H, dataset.W, dataset.K
+    H, W = dataset.H, dataset.W
 
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)
     tsdf_volume = TSDFVolumeTorch(vol_dims, vol_origin, voxel_size, device, margin=3, fuse_color=True)
@@ -42,6 +44,7 @@ if __name__ == "__main__":
             depth1, color1, vertex01, normal1, mask1 = tsdf_volume.render_model(curr_pose, K, H, W, near=args.near, far=args.far, n_samples=args.n_steps)
             T10 = icp_tracker(depth0, depth1, K)  # transform from 0 to 1
             curr_pose = curr_pose @ T10
+            cv2.imwrite("color.png", color1.cpu().numpy().astype(np.uint8))
 
         # fusion
         tsdf_volume.integrate(depth0,

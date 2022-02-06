@@ -8,11 +8,10 @@ class ICP(nn.Module):
     def __init__(self,
                  max_iter=3,
                  damping=1e-3,
-                 outlier_dist_th=0.10,
                  ):
         """
         :param max_iter, maximum number of iterations
-        :param timers, if yes, counting time for each step
+        :param damping, damping added to Hessian matrix
         """
         super(ICP, self).__init__()
 
@@ -21,11 +20,12 @@ class ICP(nn.Module):
 
     def forward(self, pose10, depth0, depth1, K):
         """
+        In all cases we refer to 0 as template, and always warp pixels from 0 to 1
         :param pose10: initial pose estimate
         :param depth0: template depth image (0)
         :param depth1: depth image (1)
         :param K: intrinsic matric
-        :return: refined 1-to-0 transform pose10
+        :return: refined 0-to-1 transformation pose10
         """
         # create vertex and normal for current frame
         vertex0 = compute_vertex(depth0, K)
@@ -36,7 +36,7 @@ class ICP(nn.Module):
 
         for idx in range(self.max_iterations):
             # compute residuals
-            residuals, J_F_p, occ = self.compute_residuals_jacobian(vertex0, vertex1, normal0, normal1, mask0, pose10, K)
+            residuals, J_F_p = self.compute_residuals_jacobian(vertex0, vertex1, normal0, normal1, mask0, pose10, K)
             JtWJ = self.compute_jtj(J_F_p)  # [B, 6, 6]
             JtR = self.compute_jtr(J_F_p, residuals)
             pose10 = self.GN_solver(JtWJ, JtR, pose10, damping=self.damping)
@@ -45,6 +45,16 @@ class ICP(nn.Module):
 
     @staticmethod
     def compute_residuals_jacobian(vertex0, vertex1, normal0, normal1, mask0, pose10, K):
+        """
+        :param vertex0: vertex map 0
+        :param vertex1: vertex map 1
+        :param normal0: normal map 0
+        :param normal1: normal map 1
+        :param mask0: valid mask of template depth image
+        :param pose10: current estimate of pose10
+        :param K: intrinsics
+        :return: residuals and Jacobians
+        """
         R = pose10[:3, :3]
         t = pose10[:3, 3]
         H, W, C = vertex0.shape
@@ -83,7 +93,7 @@ class ICP(nn.Module):
         res = res.view(-1, 1)  # [hw, 1]
         J_F_p = J_F_p.view(-1, 1, 6)  # [hw, 1, 6]
 
-        return res, J_F_p, occ
+        return res, J_F_p
 
     @staticmethod
     def compute_jtj(jac):

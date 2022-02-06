@@ -107,7 +107,7 @@ def get_poses_from_associations(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # standard configs
-    parser.add_argument('--config', type=str, default="configs/fr1_desk.yaml", help='Path to config file.')
+    parser.add_argument('--config', type=str, default="../configs/fr1_desk.yaml", help='Path to config file.')
     args = load_config(parser.parse_args())
     out_dir = os.path.join(args.data_root, "processed")
 

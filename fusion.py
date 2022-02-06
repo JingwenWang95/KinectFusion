@@ -287,6 +287,17 @@ class TSDFVolumeTorch:
     # use simple root finding
     @torch.no_grad()
     def render_model(self, c2w, intri, imh, imw, near=0.5, far=5., n_samples=192):
+        """
+        Perform ray-casting for frame-to-model tracking
+        :param c2w: camera pose, [4, 4]
+        :param intri: camera intrinsics, [3, 3]
+        :param imh: image height
+        :param imw: image width
+        :param near: near bound for ray-casting
+        :param far: far bound for ray-casting
+        :param n_samples: number of samples along the ray
+        :return: rendered depth, color, vertex, normal and valid mask, [H, W, C]
+        """
         rays_o, rays_d = self.get_rays(c2w, intri, imh, imw)  # [h, w, 3]
         z_vals = torch.linspace(near, far, n_samples).to(rays_o)  # [n_samples]
         ray_pts_w = (rays_o[:, :, None, :] + rays_d[:, :, None, :] * z_vals[None, None, :, None]).to(self.device)  # [h, w, n_samples, 3]
@@ -399,9 +410,3 @@ class TSDFVolumeTorch:
         rays_o = c2w[:3, 3].expand(rays_d.shape)
 
         return rays_o.reshape(H, W, 3), rays_d.reshape(H, W, 3)
-
-
-def tsdf_to_mesh(tsdf_vol, voxel_size=1.0, vol_origin=-0.5):
-    verts, faces, norms, vals = measure.marching_cubes_lewiner(tsdf_vol, level=0)
-    verts = verts * voxel_size + vol_origin  # voxel grid coordinates to world coordinates
-    return verts, faces, norms

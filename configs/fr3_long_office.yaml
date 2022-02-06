@@ -1,5 +1,4 @@
 data_root: "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg3_long_office_household"
-output_dir: "/home/jingwen/data/tum_rgbd/rgbd_dataset_freiburg3_long_office_household/reconstruct"
 data_type: "fr3"
 near: 0.1
 far: 4.0

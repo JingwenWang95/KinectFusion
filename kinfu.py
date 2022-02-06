@@ -15,10 +15,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # standard configs
     parser.add_argument('--config', type=str, default="configs/fr1_desk.yaml", help='Path to config file.')
+    parser.add_argument("--save_dir", type=str, default=None, help="Directory of saving results.")
     args = load_config(parser.parse_args())
-
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device("cpu")
@@ -61,21 +59,26 @@ if __name__ == "__main__":
 
     avg_time = np.array(t).mean()
     print("average processing time: {:f}s per frame, i.e. {:f} fps".format(avg_time, 1. / avg_time))
-
-    verts, faces, norms, colors = tsdf_volume.get_mesh()
-    partial_tsdf = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=norms, vertex_colors=colors)
-    partial_tsdf.export("mesh.ply")
-    np.savez("traj.npz", poses=np.stack(poses, 0))
-    np.savez("traj_gt.npz", poses=np.stack(poses_gt, 0))
-
-    gt_poses = np.load(os.path.join("traj_gt.npz"))["poses"]
-    poses = np.load(os.path.join("traj.npz"))["poses"]
-    traj_gt = np.array(gt_poses)[:, :3, 3]
+    # compute tracking ATE
+    poses_gt = np.stack(poses_gt, 0)
+    poses = np.stack(poses, 0)
+    traj_gt = np.array(poses_gt)[:, :3, 3]
     traj = np.array(poses)[:, :3, 3]
     rmse = np.sqrt(np.mean(np.linalg.norm(traj_gt - traj, axis=-1) ** 2))
     print("RMSE: {:f}".format(rmse))
-    plt.plot(traj[:, 0], traj[:, 1])
-    plt.plot(traj_gt[:, 0], traj_gt[:, 1])
-    plt.legend(['Estimated', 'GT'])
-    plt.show()
+    # plt.plot(traj[:, 0], traj[:, 1])
+    # plt.plot(traj_gt[:, 0], traj_gt[:, 1])
+    # plt.legend(['Estimated', 'GT'])
+    # plt.show()
+
+    # save results
+    if args.save_dir is not None:
+        if not os.path.exists(args.save_dir):
+            os.makedirs(args.save_dir)
+
+        verts, faces, norms, colors = tsdf_volume.get_mesh()
+        partial_tsdf = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=norms, vertex_colors=colors)
+        partial_tsdf.export(os.path.join(args.save_dir, "mesh.ply"))
+        np.savez(os.path.join(args.save_dir, "traj.npz"), poses=poses)
+        np.savez(os.path.join(args.save_dir, "traj_gt.npz"), poses=poses_gt)
 

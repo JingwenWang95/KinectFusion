@@ -34,12 +34,13 @@ There are some example config files under `configs/` which correspond to differe
 After running the script a new directory `processed/` will appear under your sequence directory. 
 
 ## Run
-After obtaining the processed sequence, you can simply run
+After obtaining the processed sequence, you can simply run `kinfu.py`. For example:
 
 ```
-python kinfu.py --config configs/fr1_desk.yaml
+python kinfu.py --config configs/fr1_desk.yaml --save_dir reconstruct/fr1_desk
 ```
-Or
+
+which will perform the tracking and mapping headlessly and save the results. Or you could run:
 
 ```
 python kinfu_gui.py --config configs/fr1_desk.yaml
@@ -48,4 +49,4 @@ python kinfu_gui.py --config configs/fr1_desk.yaml
 If you want to visualize the tracking and reconstruction process on-the-fly.
 
 ## Acknowledgement
-Part of the tracking code was borrowed and modified from [DeepIC](https://github.com/lvzhaoyang/DeeperInverseCompositionalAlgorithm). Also thank [Binbin Xu](https://github.com/binbin-xu) for his PyTorch implementation of TSDF volume.
+Part of the tracking code was borrowed and modified from [DeepIC](https://github.com/lvzhaoyang/DeeperInverseCompositionalAlgorithm). Also thank [Binbin Xu](https://github.com/binbin-xu) for implementing part of the TSDF volume code which is inspired by [Andy Zeng's tsdf-fusion-python](https://github.com/andyzeng/tsdf-fusion-python).

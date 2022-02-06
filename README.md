@@ -30,7 +30,7 @@ The code was tested on [TUM dataset](https://vision.in.tum.de/data/datasets/rgbd
 python dataset/preprocess.py --config configs/fr1_desk.yaml
 ```
 
-There are some example config files under `configs/` which correspond to different sequences. You need to replace `data_root` to your own sequence directory before running the script. 
+There are some example config files under [`configs/`](https://github.com/JingwenWang95/KinectFusion/tree/master/configs) which correspond to different sequences. You need to replace [`data_root`](https://github.com/JingwenWang95/KinectFusion/blob/master/configs/fr1_desk.yaml#L1) to your own sequence directory before running the script. 
 After running the script a new directory `processed/` will appear under your sequence directory. 
 
 ## Run

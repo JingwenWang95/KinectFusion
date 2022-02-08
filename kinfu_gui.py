@@ -112,9 +112,6 @@ if __name__ == "__main__":
     parser.add_argument("--follow_camera", action="store_true", help="Make view-point follow the camera motion")
     args = load_config(parser.parse_args())
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device("cpu")
     dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)

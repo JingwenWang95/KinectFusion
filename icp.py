@@ -78,7 +78,7 @@ class ICP(nn.Module):
 
         # point-to-plane residuals
         res = (r_normal1 * diff).sum(dim=-1)  # [h, w]
-        # point-to-plane  jacobians
+        # point-to-plane jacobians
         J_trs = r_normal1.view(-1, 3)  # [hw, 3]
         J_rot = -torch.bmm(J_trs.unsqueeze(dim=1), batch_skew(vertex0_to1.view(-1, 3))).squeeze()   # [hw, 3]
 

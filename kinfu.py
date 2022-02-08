@@ -42,7 +42,6 @@ if __name__ == "__main__":
             depth1, color1, vertex01, normal1, mask1 = tsdf_volume.render_model(curr_pose, K, H, W, near=args.near, far=args.far, n_samples=args.n_steps)
             T10 = icp_tracker(depth0, depth1, K)  # transform from 0 to 1
             curr_pose = curr_pose @ T10
-            cv2.imwrite("color.png", color1.cpu().numpy().astype(np.uint8))
 
         # fusion
         tsdf_volume.integrate(depth0,

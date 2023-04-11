@@ -53,5 +53,5 @@ The code of ICP tracker was heavily borrowed from [Binbin Xu](https://github.com
 
 ## References
  * [KinectFusion: Real-Time Dense Surface Mapping and Tracking (ISMAR 2011)](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/ismar2011.pdf)
- * [Deep Probabilistic Feature-metric Tracking (RA-L and ICRA 2021 presentation)](https://arxiv.org/pdf/2008.13504.pdf)
+ * [Deep Probabilistic Feature-metric Tracking (RA-L and ICRA 2021 presentation)](https://github.com/smartroboticslab/deep_prob_feature_track)
  * [Taking a Deeper Look at the Inverse Compositional Algorithm (CVPR 2019)](https://arxiv.org/pdf/1812.06861.pdf)
